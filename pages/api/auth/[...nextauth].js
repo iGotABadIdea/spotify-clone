@@ -4,11 +4,11 @@ import SpotifyProvider from "next-auth/providers/spotify"
 import { refreshAccessToken } from "spotify-web-api-node/src/server-methods"
 import spotifyApi, { LOGIN_URL } from "../../../lib/spotify"
 async function refreshAccessToken(token) {
-    try{
+    try {
         spotifyApi.setAccessToken(token.accessToken);
         spotifyApi.setRefreshToken(token.refreshToken);
 
-        const {body : refreshedToken} = await spotifyApi.refreshAccessToken();
+        const { body: refreshedToken } = await spotifyApi.refreshAccessToken();
         console.log("REFRESHED TOKEN IS", refreshedToken);
         return {
             ...token,
@@ -16,7 +16,7 @@ async function refreshAccessToken(token) {
             accessTokenExpires: Date.now + refreshedToken.expires_in * 1000,
             refreshToken: refreshedToken.refresh_token ?? token.refreshToken,
         }
-    } catch (error){
+    } catch (error) {
         console.error(error)
         return {
             ...token,
@@ -40,9 +40,9 @@ export default NextAuth({
         signIn: '/login'
     },
     callbacks: {
-        async jwt({token, account, user}){
+        async jwt({ token, account, user }) {
             //initial sign in 
-            if(account && user){
+            if (account && user) {
                 return {
                     ...token,
                     accessToken: account.access_token,
@@ -52,7 +52,7 @@ export default NextAuth({
                 }
             }
             //return previous token if the access token has not expired 
-            if(Date.now() < token.accessTokenExpires) {
+            if (Date.now() < token.accessTokenExpires) {
                 console.log("Existing Access Token is valid");
                 return token;
             }
@@ -60,8 +60,11 @@ export default NextAuth({
             console.log("Access token has expired, refreshing...");
             return await refreshAccessToken(token);
         },
-        async Session({session, token}) {
-            
+        async Session({ session, token }) {
+            session.user.accessToken = token.accessToken;
+            session.user.refreshToken = token.refreshToken;
+            session.user.username = token.username;
+            return session;
         }
-    }
+    },
 })
